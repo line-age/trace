@@ -1,6 +1,6 @@
 # trace
 
-Lineage candidate segment tracing from georeferenced maps.
+Lineage candidate line tracing from georeferenced maps.
 
 Part of [Lineage](https://github.com/line-age/controlplane). What this component takes in,
 what it puts out, and what it depends on are described in the controlplane's
