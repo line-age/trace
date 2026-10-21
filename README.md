@@ -17,6 +17,8 @@ A working proof of concept on one sheet: *The Oil and Gas Journal's Illinois Bas
 clean line each: 33 lines today. The main trunks, parallel pairs and corners look right. Some
 lines around Wood River are still missing, and there is no hand-traced ground truth yet, so
 there are no real scores. How it works, in plain terms: [docs/how-it-works.md](docs/how-it-works.md).
+Every rule, score and parameter, with where each number comes from:
+[docs/algorithm.md](docs/algorithm.md).
 
 Nothing here is tuned for production, and it has run on exactly one sheet.
 
@@ -33,6 +35,8 @@ cd pipeline
 ./spotter/setup.sh           # the text spotter (its own venv, torch, about 1.5 GB)
 ./run_all.sh                 # every step in order; about an hour, half of it text spotting
 ```
+
+`./run_all.sh 7` resumes at step 7 (numbers as in the table below).
 
 Everything goes in `work/` next to `pipeline/` (set `TRACE_WORK` to put it elsewhere). The
 answer is `work/out/explain_joined.gpkg`, layer `corrected`. Open it in QGIS over

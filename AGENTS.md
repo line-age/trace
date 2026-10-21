@@ -6,15 +6,19 @@ these before changing anything:
 
 1. [README.md](README.md): the steps, scripts, outputs and settings.
 2. [docs/how-it-works.md](docs/how-it-works.md): the method in plain terms.
-3. [.claude/skills/read-map/SKILL.md](.claude/skills/read-map/SKILL.md): the general
+3. [docs/algorithm.md](docs/algorithm.md): every rule, score and parameter in run order, each
+   number tagged with where it comes from (measured, legend, relative, sheet-specific, compute
+   bound), and the output file formats. Reason from this; check against the code.
+4. [.claude/skills/read-map/SKILL.md](.claude/skills/read-map/SKILL.md): the general
    procedure and the lessons learned, for any map. Claude Code loads it as the `read-map` skill.
-4. [.claude/skills/read-map/prompts.yaml](.claude/skills/read-map/prompts.yaml): one seed
+5. [.claude/skills/read-map/prompts.yaml](.claude/skills/read-map/prompts.yaml): one seed
    prompt per step, the metrics each step moves, and which functions carry it out.
 
 ## Rules
 
 - **Measure, don't tune.** Every number comes from the sheet (its legend, its histograms, its
-  own measurements) or is a relative tolerance. Never add a constant that makes this one sheet
+  own measurements) or is a relative tolerance. The values tagged **S** in docs/algorithm.md
+  are the exceptions still to fix; don't add more. Never add a constant that makes this one sheet
   look better. If a fix only works because of a number you picked by looking at this sheet,
   it's wrong. The goal is that a new sheet needs only a new measured profile.
 - **Outside data is a prior, never an answer.** County boundaries and rivers say where to look;

@@ -312,7 +312,8 @@ def main(cut=None, quiet=False):
 
 
 def write(labels, gt):
-    ds = ogr.Open(str(OUT / "text.gpkg"), 1)
+    path = OUT / "text.gpkg"
+    ds = ogr.Open(str(path), 1) if path.exists() else ogr.GetDriverByName("GPKG").CreateDataSource(str(path))
     if ds.GetLayerByName("text_extended"):
         ds.DeleteLayer("text_extended")
     srs = osr.SpatialReference()

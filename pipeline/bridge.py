@@ -1,21 +1,24 @@
-"""Join target paths across the gaps the piece linker could not cross, then find junctions and
-say why every remaining end is open.
+"""Join each pipeline's pieces into one line, find junctions, and say why every remaining end
+is open. The rules and scores in full: docs/algorithm.md, step 14.
 
 The piece linker (classify_residual) reaches a fixed 3 legend periods. diagnose_breaks showed
-most breaks are longer than that but lie across removed ground (text, symbols), and many
-continuations were short paths scored as chance on their own. Here:
+most breaks are longer than that but lie across removed ground (text, symbols). Here:
 
-  reach     no fixed distance: a join is refused only by evidence, a run of blank paper
-            longer than the target's own gap allows (the search radius is a compute bound, logged)
-  partners  target or chance paths; a chance path may join only if it does not lower the
-            target's score (its own log-odds plus the join's must be positive)
+  partners  target paths only: a path that cannot pass as the target alone is never glued
+            onto one (that pulled in town lines). The legend's own swatches are dropped.
+  reach     no fixed distance: a join is refused by evidence, a run of blank paper longer
+            than the target's own gap allows (the search radius is a compute bound)
+  corners   two ends nearly touching are one line turning, at any angle; two ends side by
+            side pointing the same way are two lines (no hairpins)
+  others    ink within a stroke width of another target line is already explained: it never
+            supports a join running beside it, and a join may not run along that line
   decision  maximum-weight matching over path ends, as for pieces
-  junction  an end that stops on another target line's side is a T: recorded, not joined
-  ends      every open end gets a cause from what lies ahead: legend symbol, paper, edge,
-            unlinked ink, other
+  junction  an end that stops on another line's side is a T: recorded, not joined
+  ends      every open end gets a cause from what lies ahead
 
-Writes out/explain_joined.gpkg: layers "lines" (joined target lines), "joins" (each bridged
-gap), "ends" (open ends with cause), "junctions".
+Writes out/explain_joined.gpkg: layers "corrected" (the answer: one simplified line per
+pipeline), "lines" (the same, unsimplified, with scores), "joins" (each bridged gap), "ends"
+(open ends with cause), "junctions".
 """
 
 import json

@@ -3,17 +3,21 @@
   1. Pieces: connected bits of residual ink, each with stroke width (area / length), length,
      axis and colour (CIELAB, from the original scan).
   2. Links: two piece ends that face each other within a few legend periods. A link's evidence
-     is its gap, sampled pixel by pixel: blank paper, removed ground ("can't tell") or ink.
+     is its gap, sampled pixel by pixel: blank paper, removed ground ("can't tell") or ink. A
+     link may not pass over another piece lying along the same line (that piece is the next
+     link; allowing it traced every dashed line twice, as two interleaved chains).
   3. Global linking: a maximum-weight matching over all ends (each end joins at most one other),
      so every link is decided against every alternative at once, not greedily.
   4. Competition, per resulting path, in log-likelihood ratios against CHANCE (pieces lined up
      by accident, given how many piece ends lie nearby: clutter raises the bar automatically):
        target  the legend line: piece weight and colour from the swatch, dash length free per
-               path around the swatch's (draftsmen vary it), blank gaps of regular length
+               path around the swatch's (draftsmen vary it), the path's median weight close
+               to the swatch's (pens don't vary), blank gaps of regular length
        solid   a continuous line that removed features broke up: gaps must be removed or tiny
      A path is the target if its target score beats chance by MARGIN and beats solid.
 
 Every parameter is either measured (legend swatch, sheet statistics) or a relative tolerance.
+The terms in full: docs/algorithm.md, step 13.
 """
 
 import networkx as nx
