@@ -1,0 +1,31 @@
+{
+  "sheet": "The Oil and Gas Journal's Illinois Basin Map, 1937",
+  "source": "Indiana Historical Society dc035/217",
+  "iiif_manifest": "https://images.indianahistory.org/iiif/2/dc035:217/manifest.json",
+  "image_px": [8400, 7246],
+  "method": "Town symbols read at 1:1 from IIIF region crops. The SYMBOL is the control point, not the label. Extremities first per docs/georeferencing.md; the SW quadrant of the sheet is the title block and carries no map content, so the western edge is anchored on the Mississippi towns instead.",
+  "gcps": [
+    {"name": "Hardin, IL",          "px": [973, 1197],  "lonlat": [-90.6179, 39.1570]},
+    {"name": "Carrollton, IL",      "px": [1407, 839],  "lonlat": [-90.4082, 39.3031]},
+    {"name": "Jerseyville, IL",     "px": [1568, 1291], "lonlat": [-90.3282, 39.1206]},
+    {"name": "Wood River, IL",      "px": [1999, 1915], "lonlat": [-90.0993, 38.8614]},
+    {"name": "East St. Louis, IL",  "px": [1942, 2551], "lonlat": [-90.1509, 38.6245]},
+    {"name": "Edwardsville, IL",    "px": [2294, 2097], "lonlat": [-89.9532, 38.8114]},
+    {"name": "Belleville, IL",      "px": [2225, 2829], "lonlat": [-89.9840, 38.5201]},
+    {"name": "Waterloo, IL",        "px": [1881, 3283], "lonlat": [-90.1512, 38.3356]},
+    {"name": "Greenville, IL",      "px": [3412, 1879], "lonlat": [-89.4131, 38.8917]},
+    {"name": "Carlyle, IL",         "px": [3498, 2605], "lonlat": [-89.3726, 38.6106]},
+    {"name": "Nashville, IL",       "px": [3446, 3254], "lonlat": [-89.3815, 38.3436]},
+    {"name": "Mound City, IL",      "px": [3914, 6456], "lonlat": [-89.1637, 37.0847]},
+    {"name": "Metropolis, IL",      "px": [4818, 6288], "lonlat": [-88.7317, 37.1512]},
+    {"name": "Paducah, KY",         "px": [5038, 6474], "lonlat": [-88.6000, 37.0834]},
+    {"name": "Golconda, IL",        "px": [5326, 5730], "lonlat": [-88.4870, 37.3653]},
+    {"name": "Princeton, KY",       "px": [6532, 6435], "lonlat": [-87.8814, 37.1092]},
+    {"name": "Madisonville, KY",    "px": [7322, 5872], "lonlat": [-87.4989, 37.3281]},
+    {"name": "Dixon, KY",           "px": [6950, 5372], "lonlat": [-87.6900, 37.5181]},
+    {"name": "Robinson, IL",        "px": [6800, 1590], "lonlat": [-87.7392, 39.0028]},
+    {"name": "Sullivan, IN",        "px": [7458, 1342], "lonlat": [-87.4061, 39.0953]},
+    {"name": "Marshall, IL",        "px": [6865, 610],  "lonlat": [-87.6947, 39.3914]},
+    {"name": "Terre Haute, IN",     "px": [7465, 385],  "lonlat": [-87.4139, 39.4667]}
+  ]
+}

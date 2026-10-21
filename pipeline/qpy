@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Run a pipeline script with QGIS's bundled Python (it has GDAL, numpy, scipy, networkx, sklearn,
+# PIL and shapely), with the GDAL/PROJ data paths set so EPSG codes resolve.
+#
+#   ./qpy run_explain.py --classify-only
+#
+# QGIS lives at $QGIS_APP (default: the QGIS 4.2.2 macOS bundle). Any other Python with those
+# packages works too: run the scripts with it directly and set PROJ_DATA if EPSG lookups fail.
+set -euo pipefail
+Q="${QGIS_APP:-/Applications/QGIS-final-4_2_2.app}/Contents"
+export PYTHONHOME="$Q/Frameworks"
+export PROJ_DATA="${PROJ_DATA:-$Q/Resources/qgis/proj}"
+export GDAL_DATA="${GDAL_DATA:-$Q/Resources/qgis/gdal}"
+cd "$(dirname "$0")"
+exec "$Q/MacOS/python3.12" "$@"

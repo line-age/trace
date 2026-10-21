@@ -1,0 +1,400 @@
+# Seed prompts for each step of reading a map, soup to nuts.
+#
+# Each step is one prompt that, given to an agent with the listed inputs, should make it do that
+# step and produce the listed outputs. They are written to be evolved by a reflective prompt
+# optimizer such as GEPA: every step names the scores it moves and the feedback text it should
+# emit, so a reflection model can read why a run went wrong and rewrite the prompt.
+#
+# Conventions
+#   id          stable name; GEPA's "component" name. Never rename, only add.
+#   evolve      true = the optimizer may rewrite `prompt`; false = fixed plumbing.
+#   inputs      files or values the step reads (paths relative to the sheet's work dir).
+#   outputs     what it must write. Later steps depend on these names.
+#   scores      metrics this step's output moves (defined under `metrics` at the bottom).
+#   feedback    what the step must report in prose for reflection (failures, counts, doubts).
+#   prompt      the text. {placeholders} are filled per sheet.
+#
+# Rules that hold for every prompt (kept here so evolution cannot drop them):
+#   - Every number used comes from this sheet (measured, or from its legend), or is a relative
+#     tolerance. No pixel constant copied from another sheet.
+#   - Outside data about the target itself (modern pipeline maps) is never an input. It is
+#     only for scoring.
+#   - Removal erases from the working image and records what was erased, by stage, in a
+#     removal mask. Only gap tests read the mask: erased ground is "can't tell", not paper.
+
+# Code is a component too. The scripts that carry out each step (listed under
+# `code_components` at the bottom) are as much a part of the "prompt" as the text, and should
+# be evolved alongside it: a reflective optimizer can rewrite a function as readily as a
+# paragraph, and most of what the text says ("reach decided by evidence", "no fixed length
+# filter") only takes effect through the code. Treat each listed function as one component,
+# scored by the same metrics as its step. The scripts are in pipeline/ in this repo.
+
+version: 1
+seeded_from: "O&GJ Illinois Basin 1937 (one sheet; seed prompts, not yet optimized)"
+
+steps:
+
+  - id: orchestrate
+    evolve: true
+    inputs: [sheet image, target description]
+    outputs: [run log, final paths, scores]
+    scores: [all]
+    feedback: "Which step produced the largest share of the final errors, with evidence."
+    prompt: |
+      You are reading one scanned, georeferenced historical map to find every instance of one
+      kind of line: {target_description}. Work through the steps in order: check the sheet,
+      read its legend, measure its styles, gather dated priors, fix the georeferencing,
+      remove everything that is not the target (text, boundaries, water, legend symbols and
+      areas, grid), explain what remains by competing legend classes, link the target across
+      gaps, find its junctions and ends, then check and score.
+      Measure every parameter on this sheet. When a step fails, diagnose it with numbers
+      before changing anything, and change the method, not a constant tuned to this sheet.
+      Log each step's counts and timings. Finish by writing the target as line features with
+      their class, evidence scores and topology, and report the scores you can compute.
+
+  - id: check_sheet
+    evolve: true
+    inputs: [sheet image]
+    outputs: [sheet.json (size, CRS, geotransform, alpha, coloured or monochrome)]
+    scores: [georef_error_px]
+    feedback: "Georeferencing error at each check point, and whether the sheet is usable."
+    prompt: |
+      Open the sheet and record its size, CRS and geotransform. Decide whether it is
+      monochrome or printed in colour (look at the chroma of ink pixels, not the paper tint).
+      Check the georeferencing at two or three well-separated places you can identify for
+      certain (river mouths, county corners, towns) against modern data, and report the
+      offset at each in pixels. If any offset is more than a few stroke widths, stop and say
+      so: everything later depends on it.
+
+  - id: separate_ink
+    evolve: true
+    inputs: [sheet image]
+    outputs: [ink mask, paper background image, ink palette (CIELAB clusters)]
+    scores: [ink_recall_on_target, runtime_s]
+    feedback: "Paper L*, thresholds chosen and why, number of ink colours found."
+    prompt: |
+      Separate ink from paper using thresholds measured on this sheet. Find the paper as the
+      bright mode of the lightness histogram. Call a pixel ink when it is clearly darker than
+      the paper or clearly more saturated (so coloured inks count, not only dark ones). On a
+      coloured sheet, cluster the ink in CIELAB and keep one mask per printed colour; fit the
+      clusters on this sheet, locally if fading shifts them. Build a paper background image
+      (the local colour of nearby non-ink pixels) for filling anything erased later.
+
+  - id: read_legend
+    evolve: true
+    inputs: [sheet image, ink mask, text readings]
+    outputs: [legend.json (entries: label, kind line/area/symbol, swatch template, colour, width, dash, gap, target flag)]
+    scores: [legend_entries_correct, symbol_match_recall]
+    feedback: "Each entry found, its kind, and any swatch that looked unlike its uses on the map."
+    prompt: |
+      Find the legend (look for the word LEGEND or a boxed key). Its entries share a column:
+      a swatch on the left and a label on the right. For each entry, crop the swatch and type
+      it: a line (measure stroke width, colour, dash length and gap if dashed), an area (solid
+      fill, hatch or stipple, with the dot or line spacing) or a point symbol (keep its
+      template). Mark the entry that matches {target_description} as the target. Then test
+      each swatch against the map: a symbol whose template matches almost nothing on the
+      map, while the map clearly shows that symbol, has a bad template. Say so; do not
+      lower the threshold until it matches.
+
+  - id: measure_styles
+    evolve: true
+    inputs: [ink mask, legend.json]
+    outputs: [profile.json (stroke widths, tilt, letter height, dash styles with windows)]
+    scores: [style_count_correct, dash_window_fit]
+    feedback: "Each style's peak, its window bounds, and styles found that the legend lacks."
+    prompt: |
+      Measure the sheet's line styles from its own ink. Take the histogram of stroke width
+      (twice the distance transform) and name its peaks (hairline, target weight, heavy
+      lines, fills). Measure the tilt of long straight strokes. For dashed styles, collect
+      thin elongated bars that lie end to end on one line with similar lengths, histogram
+      their length and gap, and treat peaks as styles and valleys as window bounds (floor
+      each window at half its dash). Compare to the legend: a style with no legend entry is
+      normal; a legend style that is absent from the map is suspicious. Write every value to
+      profile.json with how it was measured.
+
+  - id: gather_priors
+    evolve: true
+    inputs: [sheet extent, map year]
+    outputs: [boundaries dated to the map year, water centrelines, gazetteer of names, survey grid if any]
+    scores: [prior_coverage]
+    feedback: "Each source, its date filter, its licence, and gaps in coverage."
+    prompt: |
+      Collect outside data for the sheet's extent, as of {map_year}: administrative
+      boundaries from a dated historical source (US: Newberry Atlas of Historical County
+      Boundaries, filter START_N <= {yyyymmdd} <= END_N), water centrelines (a loose
+      corridor only: rivers move), a gazetteer of county and place names, and the survey
+      grid where one applies. Record each source's licence. Never collect data about the
+      target itself; that is reserved for scoring.
+
+  - id: fix_georef
+    evolve: true
+    inputs: [sheet image, ink mask, dated boundaries, profile.json]
+    outputs: [georef_fix.json (shift field, held-out error before and after)]
+    scores: [georef_error_px]
+    feedback: "Held-out median and 90th percentile error before and after, number of measurements."
+    prompt: |
+      Use straight stretches of the dated boundaries as control lines. At regular intervals,
+      find the printed boundary's offset across the prior line (the ink peak in a window at
+      the measured border weight). Each measurement gives the error along one direction.
+      Fit a smooth, low-order shift field with outlier down-weighting; do not fit every
+      point, because the draftsman nudged borders on purpose. Hold out a fifth of the
+      measurements and report error before and after on them only. Apply the fix to the
+      priors, not to the scan.
+
+  - id: remove_text
+    evolve: true
+    inputs: [sheet image, ink mask, gazetteer]
+    outputs: [text readings (polygon, string, score), removal mask stage "text"]
+    scores: [text_recall, target_ink_wrongly_removed, runtime_s]
+    feedback: "Readings found, names matched to the gazetteer, and any text box that covered target ink."
+    prompt: |
+      Find all text so it can be removed. Run a map-trained text spotter over the whole sheet
+      in overlapping tiles. Text is often letter-spaced: from each detection, walk along its
+      baseline one letter pitch at a time (pitch and height measured from the detection),
+      calling each step letter, covered or blank, and stop at blank. Grow each bound to the
+      largest extent the walk supports, then run the spotter again inside the grown bound,
+      on a copy of the map with boundaries and water already erased. Match readings to the
+      gazetteer to complete broken names. Remove letters, not whole boxes: the gaps between
+      spaced letters are paper, and lines run through them. Report every place where a
+      removed letter overlapped a line of the target's weight.
+
+  - id: remove_boundaries
+    evolve: true
+    inputs: [working image, dated boundaries, georef_fix.json, profile.json]
+    outputs: [removal mask stage "boundary", measured boundary style]
+    scores: [boundary_recall, target_ink_wrongly_removed]
+    feedback: "Measured boundary style, windows accepted out of total, and stretches where a target line runs along a boundary."
+    prompt: |
+      Remove printed boundaries. In a strip around each prior boundary (width from the
+      georeferencing error), find ink at the boundary's weight and pattern, which you measure
+      here as the most common style inside the strips. Accept a window only when enough of
+      it is covered by that style, and remove the ink there. Where a line of the target's
+      style runs inside the strip, do not remove it: report it instead.
+
+  - id: remove_water
+    evolve: true
+    inputs: [working image, water centrelines, profile.json]
+    outputs: [removal mask stage "river"]
+    scores: [river_recall, target_ink_wrongly_removed]
+    feedback: "Rivers removed, and any stretch where dashed ink was removed as river."
+    prompt: |
+      Remove rivers and shorelines. In a loose corridor around each water centreline, find
+      heavy, curving strokes that stay continuous for several times their own width, and
+      remove them. Rivers broken by labels can look dashed; continuity across the label's
+      removed ground, not dash shape, decides.
+
+  - id: remove_legend_marks
+    evolve: true
+    inputs: [working image, legend.json]
+    outputs: [removal mask stage "legend" (symbols and areas), match counts per entry]
+    scores: [symbol_match_recall, target_ink_wrongly_removed, runtime_s]
+    feedback: "Matches per legend entry; entries with zero matches; matches that sat on a target line."
+    prompt: |
+      Remove every non-target legend class from the map. Match each point symbol's template
+      at a few scales around the swatch's size and remove matches. Remove filled areas at
+      their measured fill (solid fill: ink that a square larger than the heaviest line fits
+      in; stipple: dot clusters at the measured spacing). An entry with zero matches is a
+      finding, not a result: check its template against the map before moving on.
+
+  - id: remove_grid
+    evolve: true
+    inputs: [working image, profile.json]
+    outputs: [removal mask stage "grid"]
+    scores: [grid_recall, target_ink_wrongly_removed]
+    feedback: "Grid lines found, tilt used, slivers left behind."
+    prompt: |
+      Remove survey grid lines: long, straight, thin strokes at the measured tilts (allow
+      the few degrees a warped scan adds). Remove only along lines that run for many cells;
+      short straight bits are not grid.
+
+  - id: cooperate
+    evolve: true
+    inputs: [all removal stages]
+    outputs: [final removal mask, rounds log]
+    scores: [all removal scores, runtime_s]
+    feedback: "Change per round per stage; which stage helped which."
+    prompt: |
+      Run the removal stages again, each one recomputed from the original sheet but seeing
+      the map with every other stage's removals erased. Text is easier to read once borders
+      are gone; borders are easier to follow once text is gone. Stop when no stage changes
+      by more than a few percent of its pixels. Keep the removal mask by stage.
+
+  - id: residual_pieces
+    evolve: true
+    inputs: [cleaned image, final removal mask, profile.json]
+    outputs: [pieces (centre, axis, length, stroke width, colour)]
+    scores: [piece_recall_on_target]
+    feedback: "Pieces kept and dropped, and why; target dashes that never became pieces."
+    prompt: |
+      Break the remaining ink into pieces: connected bits with a centre, axis, length,
+      stroke width (area over length) and colour from the original scan. Keep elongated
+      pieces. Do not drop short pieces by a fixed length: a clipped or shortened dash of the
+      target is still evidence, and its chain decides.
+
+  - id: link_pieces
+    evolve: true
+    inputs: [pieces, removal mask, original ink, legend.json]
+    outputs: [links, paths]
+    scores: [break_count, false_join_count]
+    feedback: "Links considered and accepted; largest matching group; links rejected by each rule."
+    prompt: |
+      Link piece ends into paths. Two ends may link when they face each other along one
+      axis. Score each link as log-odds against chance lining-up: turn, sideways offset,
+      similar length and width, a blank gap near the target's own gap, and how crowded the
+      area is with other ends. Sample the gap pixel by pixel: blank paper counts against
+      the link, removed ground counts as "can't tell" with a small cost, ink counts for it.
+      How far a link may reach is decided by that evidence, not by a fixed distance: a long
+      gap is fine when it is mostly removed ground, and a short one is not when it is mostly
+      paper. A link may never pass over another piece lying along the same line: that piece
+      is the next link, and counting its ink as support for a longer link makes every dashed
+      line come out twice, as two interleaved chains (every other dash each). Decide all
+      links at once with a maximum-weight matching, so each end joins its best partner
+      against every alternative. Check the result for two paths running on top of each
+      other: that is always a linking error, never two lines.
+
+  - id: classify_paths
+    evolve: true
+    inputs: [paths, legend.json]
+    outputs: [paths with class target / other legend classes / chance, and scores]
+    scores: [length_precision, length_recall]
+    feedback: "Count per class; target paths near the margin; short chance paths that continue a target path."
+    prompt: |
+      Explain each path by the legend class that fits it best, including chance. For the
+      target, use the swatch's colour, weight and pattern, with the dash length free per
+      path around the swatch's (draftsmen vary it). For a continuous line broken only by
+      removals, use a solid class. Call a path the target only when its log-odds beat chance
+      by the margin and beat every other class. Judge stroke weight on the whole path, not
+      only per piece: draftsmen vary dash length but not pen weight, and a grid line's
+      remnants line up so well that alignment alone outvotes a wrong weight. The legend's own
+      swatches are never map features.
+
+  - id: bridge_breaks
+    evolve: true
+    inputs: [classified paths, removal mask, original ink]
+    outputs: [joined paths, breaks.json (every remaining end and why it stays open)]
+    scores: [break_count, false_join_count, missing_length]
+    feedback: "For each remaining open end: gap to the best continuation, its blank, removed and residual fractions, and which rule refused it."
+    prompt: |
+      Find every place a target path ends and ask whether the line really stops there. For
+      each open end, look ahead along its direction for another path end (of any class) that
+      faces it with the same weight, dash and direction. Measure the gap: blank paper,
+      removed ground (and which stage removed it) and residual ink not in any path. Join when
+      the gap is explained: mostly removed ground, or unlinked ink in the target's style,
+      with no blank run longer than the target's own gap allows. Leave the end open when the
+      gap is paper, and say why. Do not join two parallel lines into one zigzag: a join must
+      keep the sideways offset within about one stroke width. A line may bend inside the gap:
+      judge a join by how far each end points away from the other end, not by the angle
+      between the two ends. A partner much thinner or with a very different dash is another
+      feature (a grid sliver, a border remnant), not a continuation. Join target paths only:
+      a path that cannot pass as the target alone must not be added to one (that pulled in
+      town lines). Ink that belongs to another target line is already explained and must not
+      support a join running beside it, or a join will trace a neighbouring line a second
+      time. Two ends nearly touching at an angle are one line turning a corner; two ends side
+      by side pointing the same way are two lines, never a hairpin. The output is one clean
+      line per pipeline, with no markers: diagnostics go in separate layers, off by default.
+
+  - id: topology
+    evolve: true
+    inputs: [joined paths, legend.json, text readings]
+    outputs: [junctions, ends with their cause, sections (runs between junctions and ends), labels attached]
+    scores: [junction_recall, section_boundary_correct]
+    feedback: "Each junction and end with its evidence; sections whose owner label is uncertain."
+    prompt: |
+      Turn the joined paths into a network. Find junctions where one target line meets
+      another (an end that stops on another line's side is a T, not a break). Classify each
+      true end by what is there: a legend symbol (refinery, station, terminal), the sheet
+      edge, an arrowed note ("To Chicago"), or nothing (an unexplained end, to report).
+      Split lines into sections at junctions and ends. Attach the nearest owner label
+      printed along a section ("SHELL", "Standard of Indiana"), and record a change of
+      owner label along one line as a candidate section boundary.
+
+  - id: review_visually
+    evolve: true
+    inputs: [joined paths, sheet image]
+    outputs: [review notes, fixed comparison windows rendered]
+    scores: [reviewer_agreement]
+    feedback: "Per window: what is right, what is wrong, and which step caused it."
+    prompt: |
+      Render the result over the scan in fixed comparison windows chosen for distinct
+      problems (a dense field, a river crossing, a label-heavy area, parallel lines). Show
+      one layer at a time, each path in its own colour with its number, so breaks and false
+      joins are visible. Overlay the boundary priors: a target that runs exactly along a
+      boundary is suspect. Write down what is wrong in each window and which step caused it,
+      and re-render every window after any change, because fixes break each other.
+
+  - id: score
+    evolve: false
+    inputs: [joined paths and topology, hand-traced ground truth (tuning and held-out patches)]
+    outputs: [scores.json]
+    scores: [all]
+    feedback: "Every metric on the held-out patches, plus the worst three places with coordinates."
+    prompt: |
+      Score the result against hand-traced ground truth. Use the tuning patch for any
+      adjustment and report final numbers only on the held-out patch. Match by buffered
+      overlap (buffer from the georeferencing error). Report each metric below and list the
+      three worst places with coordinates and what went wrong there.
+
+  - id: diagnose
+    evolve: true
+    inputs: [scores.json, breaks.json, removal mask, run log]
+    outputs: [diagnosis (cause, count, evidence, proposed method change)]
+    scores: [none directly; feeds reflection]
+    feedback: "The diagnosis itself."
+    prompt: |
+      Before changing anything, explain the errors with numbers. For each break, false join
+      and miss, find which step and which rule caused it, tally the causes, and give the
+      distribution of the measurements behind each cause. Propose a change to the method
+      that removes the largest cause without a constant tuned to this sheet, and say which
+      other windows it might break.
+
+  - id: generalize
+    evolve: true
+    inputs: [a second sheet of a different style]
+    outputs: [profile.json for it, list of hand rules that had to change]
+    scores: [hand_rules_needed]
+    feedback: "Each place a step needed more than a new profile.json, and why."
+    prompt: |
+      Run the whole procedure on a sheet of a different style (another year, publisher or
+      colour scheme). Only profile.json should change. List every step that needed a new
+      rule, a new constant or a code change, and say what the first sheet taught wrongly.
+
+metrics:
+  # Score vector for a Pareto front. GEPA keeps candidates that are best on any instance;
+  # treat each (sheet window, metric) pair as an instance so trade-offs survive.
+  length_recall: "target length found / ground-truth length, on held-out patches"
+  length_precision: "target length correct / target length claimed"
+  break_count: "open ends per 100 km of true line that are not true ends (lower is better)"
+  false_join_count: "joins between different lines, or a line and a non-target, per 100 km"
+  missing_length: "ground-truth length with no target path within the buffer"
+  junction_recall: "true junctions found / true junctions"
+  section_boundary_correct: "sections whose ends match hand-marked junctions, ends and owner changes"
+  target_ink_wrongly_removed: "target ink pixels erased by a non-target stage / target ink pixels"
+  symbol_match_recall: "legend symbols matched / hand-counted symbols, per entry"
+  text_recall: "labels read / labels on the sheet"
+  georef_error_px: "held-out median boundary offset after the fix"
+  hand_rules_needed: "steps needing more than a new profile.json on a second sheet"
+  runtime_s: "wall time for the step"
+
+code_components:
+  # step id -> the code that carries it out today (paths relative to pipeline/; spotter/ runs
+  # in its own venv). Each function is an evolvable component scored by its step's metrics.
+  check_sheet: [setup/warp_sheet.py]
+  gather_priors: [setup/fetch_data.sh, setup/make_borders.py]
+  separate_ink: [explain.py:ink_mask, explain.py:paper_background, setup/make_ink.py]
+  read_legend: [legend.py]
+  measure_styles: [learn_styles.py]
+  fix_georef: [border_fit.py, borders.py:find_borders]
+  remove_text: [spotter/spot_sheet.py, spotter/spot_crops.py, extend_text.py, text_mask.py, stages.py:grow_bound, stages.py:text_bounds, stages.py:redetect]
+  remove_boundaries: [stages.py:boundary_stage, stages.py:_windows]
+  remove_water: [stages.py:river_stage, stages.py:river_px]
+  remove_legend_marks: [stages.py:legend_stage]
+  remove_grid: [stages.py:grid_stage, common.py:explain]
+  cooperate: [run_explain.py:main, legacy/multipass.py]
+  residual_pieces: [classify_residual.py:pieces, common.py:bar_stats]
+  link_pieces: [classify_residual.py:link_llr, classify_residual.py:gap_evidence, classify_residual.py:classify]
+  classify_paths: [classify_residual.py:bar_llr, classify_residual.py:background_model, classify_residual.py:classify]
+  bridge_breaks: [bridge.py:join_score, bridge.py:main]
+  topology: [bridge.py:main]   # junctions and end causes only; sections and owner labels not yet
+  diagnose: [diagnose_breaks.py, tally_breaks.py]
+  review_visually: [debug/dbg_overlap2.py, debug/dbg_crop.py]   # checks only; the looking is done in QGIS
+  # not yet in code: score, generalize
