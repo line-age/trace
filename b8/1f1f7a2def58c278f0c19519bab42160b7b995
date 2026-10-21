@@ -1,0 +1,144 @@
+pipeline/spotter/spot_sheet.py
+  s_6513930a709d47::t_b7e1ed3757c090 4-5,9-10,14,27,78-79
+  s_6513930a709d47::t_3d1091384b9efa 1-3,6-8,11-13,15-26,28-77,80-85
+pipeline/common.py
+  s_6513930a709d47::t_3d1091384b9efa 2-5,16-26,34-318
+  s_6513930a709d47::t_b7e1ed3757c090 1,6-15,27-33
+pipeline/debug/dbg_dup.py
+  s_6513930a709d47::t_3d1091384b9efa 1-29
+pipeline/explain.py
+  s_6513930a709d47::t_3d1091384b9efa 1-12,14-70
+  s_6513930a709d47::t_b7e1ed3757c090 13
+pipeline/setup/gcps.json
+  s_6513930a709d47::t_3d1091384b9efa 1-31
+pipeline/spotter/setup.sh
+  s_6513930a709d47::t_2d2e50a3f351f6 1-33
+pipeline/borders.py
+  s_6513930a709d47::t_3d1091384b9efa 1-124
+pipeline/debug/dbg_overlap2.py
+  s_6513930a709d47::t_3d1091384b9efa 1-23
+pipeline/legacy/multipass.py
+  s_6513930a709d47::t_3d1091384b9efa 1-109
+pipeline/debug/dbg_bridge.py
+  s_6513930a709d47::t_3d1091384b9efa 1-36
+pipeline/debug/dbg_lines.py
+  s_6513930a709d47::t_3d1091384b9efa 1-18
+pipeline/extend_text.py
+  s_6513930a709d47::t_dd234d1d654c0d 31,33,46
+  s_6513930a709d47::t_b7e1ed3757c090 43,47
+  s_6513930a709d47::t_3d1091384b9efa 1-30,32,34-42,44-45,48-356
+pipeline/legacy/m3_join_ends.py
+  s_6513930a709d47::t_3d1091384b9efa 1-124
+.claude/skills/read-map/SKILL.md
+  s_6513930a709d47::t_59c23c65b1d2e2 38-45
+  s_6513930a709d47::t_3f53422aca5b50 74-78
+  s_6513930a709d47::t_62cb5e39ffb77d 62-67
+  s_6513930a709d47::t_08b396fc7842b5 19-20
+  s_6513930a709d47::t_7a339d9944c1f1 29-35,135-160
+  s_6513930a709d47::t_bd37b8f099d68b 196-197
+  s_6513930a709d47::t_3f5e6332a6cf62 1-18,21-28,36-37,46-61,68-73,79-134,161-195,198-211
+pipeline/debug/dbg_overlap.py
+  s_6513930a709d47::t_3d1091384b9efa 1-36
+pipeline/learn_styles.py
+  s_6513930a709d47::t_3d1091384b9efa 1-83
+pipeline/run_explain.py
+  s_6513930a709d47::t_b7e1ed3757c090 24,64
+  s_6513930a709d47::t_3d1091384b9efa 1-23,25-63,65-160
+pipeline/debug/dbg_open.py
+  s_6513930a709d47::t_3d1091384b9efa 1-37
+pipeline/legacy/m2_tracker.py
+  s_6513930a709d47::t_3d1091384b9efa 1-184
+pipeline/setup/make_borders.py
+  s_6513930a709d47::t_8b2e9cb8e51775 51
+  s_6513930a709d47::t_8fdd8789b7e6a1 1-50,52-73
+.gitignore
+  s_6513930a709d47::t_4ca42f62a02e0a 1-3
+pipeline/qpy
+  s_6513930a709d47::t_eff20b2732c9e3 1-15
+pipeline/border_fit.py
+  s_6513930a709d47::t_3d1091384b9efa 1-171
+CLAUDE.md
+  s_6513930a709d47::t_ba9aecc75c39d9 1
+AGENTS.md
+  s_6513930a709d47::t_f48bd57a38e74a 1-82
+pipeline/diagnose_breaks.py
+  s_6513930a709d47::t_3d1091384b9efa 1-138
+pipeline/legacy/m1_explain_away.py
+  s_6513930a709d47::t_3d1091384b9efa 1-91
+pipeline/legacy/ocr_text.py
+  s_6513930a709d47::t_3d1091384b9efa 1-22,24-36,39-250
+  s_6513930a709d47::t_dd234d1d654c0d 23,37
+  s_6513930a709d47::t_d3eb80e484da6b 38
+pipeline/setup/warp_sheet.py
+  s_6513930a709d47::t_9ad375b54af47e 1-39
+.claude/skills/read-map/prompts.yaml
+  s_6513930a709d47::t_c30e7676ca521a 396-397
+  s_6513930a709d47::t_0a2af893915b96 25-29,31
+  s_6513930a709d47::t_e53df308a061c6 30,379-383,387,399-400
+  s_6513930a709d47::t_68bc0092850e4d 377-378,384-386,388-391,393-395,398
+  s_6513930a709d47::t_10244291138731 1-24,32-247,254-265,270-284,295-376
+  s_6513930a709d47::t_609c507e1650c8 392
+  s_6513930a709d47::t_e590f07da1653a 288-294
+  s_6513930a709d47::t_970889dbff3e4b 248-253
+  s_6513930a709d47::t_1b6be929994c65 266-269
+  s_6513930a709d47::t_404d3643b37aa3 285-287
+pipeline/legacy/ocr_bench.py
+  s_6513930a709d47::t_3d1091384b9efa 1-73
+pipeline/run_all.sh
+  s_6513930a709d47::t_8cfff80e701ccd 1-27
+  s_6513930a709d47::t_6a859f37829d73 28-30
+  s_6513930a709d47::t_310d8f6eb84e81 31
+pipeline/tally_breaks.py
+  s_6513930a709d47::t_3d1091384b9efa 1-24
+pipeline/bridge.py
+  s_6513930a709d47::t_3d1091384b9efa 1-325
+pipeline/setup/fetch_data.sh
+  s_6513930a709d47::t_eac40a5a0f8c20 1-45
+docs/how-it-works.md
+  s_6513930a709d47::t_3d1091384b9efa 1-52
+  s_6513930a709d47::t_4ca4fcc3794980 53-68
+pipeline/spotter/spot.py
+  s_6513930a709d47::t_3d1091384b9efa 1-2,7-10,12-22,29-32,34-78,81,83-85,87-93
+  s_6513930a709d47::t_b7e1ed3757c090 3-6,11,23-28,33,79-80,82,86
+pipeline/debug/dbg_crop.py
+  s_6513930a709d47::t_3d1091384b9efa 1-28
+pipeline/spotter/spot_crops.py
+  s_6513930a709d47::t_3d1091384b9efa 1-45
+pipeline/paint_out.py
+  s_6513930a709d47::t_b7e1ed3757c090 18
+  s_6513930a709d47::t_3d1091384b9efa 1-17,19-44
+pipeline/setup/make_ink.py
+  s_6513930a709d47::t_b9fcd523db4638 1-35
+pipeline/stages.py
+  s_6513930a709d47::t_3d1091384b9efa 1-8,10-20,22-24,28-109,111-190,192-302
+  s_6513930a709d47::t_b7e1ed3757c090 9,21,25-27,110,191
+pipeline/classify_residual.py
+  s_6513930a709d47::t_3d1091384b9efa 1-242
+pipeline/legend.py
+  s_6513930a709d47::t_3d1091384b9efa 1-21,23-156
+  s_6513930a709d47::t_b7e1ed3757c090 22
+pipeline/debug/dbg_pair.py
+  s_6513930a709d47::t_3d1091384b9efa 1-23
+README.md
+  s_6513930a709d47::t_778349485d8532 7,13-109
+pipeline/prep.py
+  s_6513930a709d47::t_3d1091384b9efa 1-52
+pipeline/text_mask.py
+  s_6513930a709d47::t_18b16b158dbf5a 1-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "b81f1f7a2def58c278f0c19519bab42160b7b995",
+  "prompts": {},
+  "sessions": {
+    "s_6513930a709d47": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b31e867e-ace2-43d0-af79-d8b578817c5e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Nick Marden <nmarden@avvo.com>"
+    }
+  }
+}
