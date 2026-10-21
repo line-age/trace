@@ -1,0 +1,19 @@
+docs/algorithm.md
+  s_6513930a709d47::t_a75eabf8e8213f 162,170,227
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "45b10505ac5a81c29c1060268a1be89d37a057cc",
+  "prompts": {},
+  "sessions": {
+    "s_6513930a709d47": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b31e867e-ace2-43d0-af79-d8b578817c5e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Nick Marden <nmarden@avvo.com>"
+    }
+  }
+}
