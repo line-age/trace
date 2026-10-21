@@ -159,7 +159,7 @@ ink, and recorded under `name`. Gap tests read the union of all removals as **co
    ≤ 1.3 x the word's pitch, or ≤ 0.8h for one character **R**). For each bound that grew by
    more than h/2, and for every letter-spaced name step 7 rebuilt, re-run the spotter inside it (padded to ≥ 384 px of context) on the sheet
    with pass 1's boundaries and rivers painted out. Keep readings whose centre lies inside
-   their bound (± 0.3 x its height). 91 readings from 62 bounds on this sheet.
+   their bound (± 0.3 x its height). 89 readings from 62 bounds on this sheet (a clean run; re-runs vary by a couple).
 3. **Final**, from the original sheet, in this order:
 
 | Stage | Rule | Params |
@@ -167,7 +167,7 @@ ink, and recorded under `name`. Gap tests read the union of all removals as **co
 | text | all polygons (spotter, letter cells, pass 2), drawn with 2 px growth, removed with 1 more | **R** |
 | boundary | windows of 160 px along each shifted 1937 boundary, strip ±12 px; per window the printed line's offset (ink peak), cover, stroke width (max 2 x distance transform across a ±4 px band) and colour. Windows with cover ≥ 0.4 are candidates. The border style = mode of candidate stroke widths (1 px bins, smoothed); accept windows within ±30% of it and ΔE ≤ 20 of their median colour. A thinner or differently coloured line inside the strip stays | strip 12 **S** (about the georef 90th percentile), 160/4 **S**, 0.4/30%/20 **R**. Measured style here: 9.5 px |
 | river | strip ±45 px around each shifted Natural Earth river; a connected ink component is river if its extent *along* the river inside the strip is ≥ 4 x 45 px. Dashed lines are many short pieces and fail this | 45 **S**, 4x **R**. All 14 rivers on the sheet |
-| legend | each symbol template at scales 0.85/1/1.15: score = mean ink under the template − mean ink in a 2 px ring around it; local maxima ≥ 0.6 are matches, removed with the template dilated 2. Solid areas: opening with a square of side 2 x target width. Stipple: components 0.3-3 x the swatch dot size with ≥ 6 such within 3 x the swatch dot spacing | 0.6 **R**, scales **R**. Matches here: 35 wells, 0 dry holes, 18 refineries, 1 new pool |
+| legend | each symbol template at scales 0.85/1/1.15: score = mean ink under the template − mean ink in a 2 px ring around it; local maxima ≥ 0.6 are matches, removed with the template dilated 2. Solid areas: opening with a square of side 2 x target width. Stipple: components 0.3-3 x the swatch dot size with ≥ 6 such within 3 x the swatch dot spacing | 0.6 **R**, scales **R**. Matches in a clean run: 37 wells, 0 dry holes, 32 refineries, 1 new pool |
 | grid | the grid layer from step 10, grown 1 | |
 
 About 13% of the original ink remains.
@@ -224,7 +224,7 @@ line's remnants line up well enough to outvote a wrong width piece by piece). So
 Σ links (solid term). Class: **target** if target > 8 **R** (`MARGIN`) and > solid; else
 **solid** if solid > 8; else **chance**.
 
-Output `explain_paths.gpkg` layer `paths`: 174 paths, 76 target, on this run.
+Output `explain_paths.gpkg` layer `paths`: 173 paths, 76 target, in a clean run.
 
 ## 14. Join each line (`bridge.py`)
 
