@@ -49,7 +49,7 @@ Removed ink gets painted over with the local paper colour, and we keep a mask of
 
 - 33 lines, no duplicates. Three close pairs remain and each one is a real pair of parallel pipelines about 11 px apart (checked in the scan).
 - Still missing: some lines around Wood River (the Shell line heading southwest, most of Ajax), and the second line of some parallel pairs is only partly traced.
-- No hand-traced ground truth yet, so no real scores - just our own spot checks. A hand trace of one or two patches would fix that.
+- Ground truth covers only two hand-traced patches (one to tune on, one held out). There it finds about 70-77% of the pipe length and draws nothing false; elsewhere we only have spot checks.
 
 ## Where the code is
 

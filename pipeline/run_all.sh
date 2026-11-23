@@ -37,4 +37,9 @@ step 11 "georeferencing check and fix"    ./qpy border_fit.py
 step 12 "read the legend"                 ./qpy legend.py
 step 13 "remove, then explain"            env TRACE_RUN=learned ./qpy run_explain.py
 step 14 "join each line's pieces"         ./qpy bridge.py
+score() {
+  if [ -s "$WORK/truth/1937.gpkg" ]; then ./qpy score.py
+  else echo "(no truth/1937.gpkg yet: ./qpy setup/make_truth.py, then hand-trace)"; fi
+}
+step 15 "score against hand-traced truth"  score
 printf '\n== done: %s/out/explain_joined.gpkg, layer "corrected"\n' "$WORK"

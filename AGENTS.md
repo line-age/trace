@@ -34,7 +34,7 @@ these before changing anything:
   where it matters. Most bugs here were found by looking, not by counts: every line traced
   twice, a grid line passing as pipeline, corners cut across.
 - **Report what you verified, and how.** If a run wasn't done or a check wasn't possible, say
-  so. There is no ground truth yet, so "looks right" is a spot check, not a score.
+  so. Ground truth covers two patches only, so "looks right" elsewhere is a spot check, not a score.
 - **Keep prompts.yaml current.** When you add or change a step, update its prompt, its
   `scores`/`feedback`, and its entry under `code_components`. The prompts and the code are
   both meant to be tuned later by a reflective optimizer (GEPA-style) against several metrics.
@@ -73,8 +73,11 @@ even after you stop waiting, blocking later calls. Use QGIS only for viewing.
 - `setup/make_ink.py` uses a fixed grey threshold (110), and `stages.py`/`make_borders.py`
   carry this sheet's extent as a literal box. Both should come from the sheet.
 - Dry-hole symbols match zero times: their legend template doesn't fit their map versions.
-- No ground truth. The next real step is a hand trace of two patches, one to tune on and one
-  held out, and a scorer for the metrics in prompts.yaml.
+- Recall is about 0.7 (baseline, pools ignored: patch B tune 0.70 recall / 1.00 precision /
+  11 breaks; patch D holdout 0.77 / 1.00 / 3). Nothing false; misses are whole stretches, mostly
+  short heavy-dash field lines next to pools and lines running through labels. Truth is a hand
+  trace of two patches in `work/truth/1937.gpkg` (not committed, see README "Scoring"). Tune on
+  B only; score D to report.
 
 ## Gotchas
 

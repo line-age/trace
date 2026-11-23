@@ -325,7 +325,7 @@ steps:
   - id: score
     evolve: false
     inputs: [joined paths and topology, hand-traced ground truth (tuning and held-out patches)]
-    outputs: [scores.json]
+    outputs: [scores_<role>.json, score_errors_<role>.gpkg]
     scores: [all]
     feedback: "Every metric on the held-out patches, plus the worst three places with coordinates."
     prompt: |
@@ -397,4 +397,5 @@ code_components:
   topology: [bridge.py:main]   # junctions and end causes only; sections and owner labels not yet
   diagnose: [diagnose_breaks.py, tally_breaks.py]
   review_visually: [debug/dbg_overlap2.py, debug/dbg_crop.py]   # checks only; the looking is done in QGIS
-  # not yet in code: score, generalize
+  score: [score.py]
+  # not yet in code: generalize

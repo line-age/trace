@@ -263,6 +263,44 @@ leftover ink; **paper ahead** if it holds a blank run ≥ 3P; **other**.
 Each line is simplified (Douglas-Peucker, tolerance = its median sw) into the `corrected`
 layer. This sheet: 75 target paths → 33 lines from 42 joins.
 
+## 15. Score (`score.py`)
+
+Compares `corrected` with hand-traced truth, per area (`patches` with `role` tune or holdout),
+in EPSG:5070 metres. Both are clipped to the area.
+
+- **Pools are not scored.** On this sheet pools are solid and hide any line under it, so no
+  route there is known, to the tracer or to the pipeline (**S**: another sheet may draw fills
+  that lines show through, or none; check its legend and scan before reusing this). The step-4 `pools` mask (`out/masks.npz`) is polygonized,
+  blobs smaller than a disk of radius b are dropped (**R**), and the rest is cut out of the area.
+  Pool edges then count as area edge. The mask also catches other solid ink at least 11 px wide
+  (the thick river, big county letters), which only removes short crossings. `--no-pools` turns
+  this off; it is required with `--buffer-m`, since another scan has no pool mask.
+
+- **Buffer** b = 2 x the median `sw` of the target paths (**R**), in metres from the scan's pixel
+  size at its centre. The truth is traced over the same scan, so georeferencing error cancels;
+  b covers stroke width, the 1 sw simplification and the tracer's hand. Recall and precision are
+  also reported at b = 1, 2 and 4 sw. Truth from another scan needs `--buffer-m`, measured.
+- **length_recall** = 1 − missed / |truth|. Truth is sampled every b/4; a sample is found if
+  the nearest traced point q is within b **and** q's nearest true line is the sample's own.
+  Without that second test a single traced line would also "find" its untraced parallel twin
+  (this sheet: pairs ~11 px apart, b ~13 px). **missing_length_km** = missed.
+  **length_precision** = 1 − |traced − buffer(truth, b)| / |traced|.
+- **break_count**: traced open ends (no other traced line within b) that lie within b of truth,
+  are not within b of the area edge, and are more than 2b from a true end (hand-marked `end` /
+  `exits_patch` nodes, or truth open ends if there are none). Per 100 km of truth.
+- **false_join_count**: each traced line is sampled every b/2 and each sample labelled with the
+  nearest true line within b. Runs of one label at least 2b long count. A traced line with runs
+  on two true lines more than 2b apart is a join of two lines; one with a true run and an
+  unmatched run is a join into non-target. Per 100 km of truth.
+- **junction_recall**: true junctions (hand-marked, or where ≥ 3 true arms meet within b) where
+  ≥ 3 traced crossings cut a circle of radius 2b and the traced lines are connected inside it.
+- **Worst places**: the area split 10 x 10; the three cells with the most missed + false length.
+
+Checked on synthetic lines by `debug/check_score.py` (identical, shifted, split, half found,
+parallel pair with one or both traced,
+two kinds of false join, T junction found and missed, line crossing the area edge, and a pool
+cut out of the area: lines stopping at its edges, a line crossing it, a real break outside it).
+
 ## Output files
 
 | File | Contents |
@@ -279,6 +317,8 @@ layer. This sheet: 75 target paths → 33 lines from 42 joins.
 | `out/explain_joined.gpkg` `joins` | each bridged gap: `a`, `b` (path fids), `gap_p` (in periods), `removed` (fraction), `score` |
 | `out/explain_joined.gpkg` `ends` | each open end: `line`, `cause` |
 | `out/explain_joined.gpkg` `junctions` | `line`, `meets` |
+| `out/scores_<role>.json` | `buffer_m`, `pools_ignored`, then per area: `truth_km`, `traced_km`, the metrics above, `pool_area_pct`, `recall_precision_by_buffer`, `worst` (`lon`, `lat`, `what`) |
+| `out/score_errors_<role>.gpkg` | layers `missed`, `false` (lines), `breaks`, `joins`, `junctions` (points; `area`, `info`), `pools` (the ignored areas) |
 
 ## Debts (the S values, and other known gaps)
 
@@ -287,5 +327,5 @@ layer. This sheet: 75 target paths → 33 lines from 42 joins.
   come from the sheet (histograms, `legend.json`, the raster's own bounds).
 - Two ink masks exist; one measured mask should serve every step.
 - Dry-hole symbols match zero times: the legend template doesn't fit their map versions.
-- No ground truth or scorer yet. The metrics a scorer should report are in
-  `.claude/skills/read-map/prompts.yaml`.
+- No ground truth yet. The scorer (step 15) is ready; it needs a hand trace of two patches,
+  one to tune on and one held out, in `work/truth/1937.gpkg`.

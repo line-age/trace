@@ -15,8 +15,8 @@ team lead is [@tisljaricleo](https://github.com/tisljaricleo). If that changes, 
 A working proof of concept on one sheet: *The Oil and Gas Journal's Illinois Basin Map*, 1937
 (Indiana Historical Society `dc035/217`). It finds the oil pipe lines and writes them as one
 clean line each: 33 lines today. The main trunks, parallel pairs and corners look right. Some
-lines around Wood River are still missing, and there is no hand-traced ground truth yet, so
-there are no real scores. How it works, in plain terms: [docs/how-it-works.md](docs/how-it-works.md).
+lines around Wood River are still missing. Against a hand trace of two patches (see
+"Scoring") it finds about 70-77% of the pipe length and draws nothing false. How it works, in plain terms: [docs/how-it-works.md](docs/how-it-works.md).
 Every rule, score and parameter, with where each number comes from:
 [docs/algorithm.md](docs/algorithm.md).
 
@@ -68,6 +68,7 @@ TRACE_RUN=learned ./qpy run_explain.py --classify-only --reuse-symbols
 | 12 | `legend.py` | Reads the legend into classes | `out/legend.json` |
 | 13 | `run_explain.py` | Removes text, borders, rivers, symbols, grid; classifies what's left | `out/explain_paths.gpkg`, `out/explain_removed.tif`, `out/explain_remains.tif` |
 | 14 | `bridge.py` | Joins each line's pieces into one line | `out/explain_joined.gpkg` |
+| 15 | `score.py` | Scores the lines against hand-traced truth (skipped until `truth/1937.gpkg` exists) | `out/scores_tune.json`, `out/score_errors_tune.gpkg` |
 
 Supporting modules: `common.py` (paths, shared geometry), `explain.py` (ink, paper colour,
 the removal state), `stages.py` (the removal stages), `classify_residual.py` (pieces, links,
@@ -86,6 +87,32 @@ label it with `line`. Other layers worth a look:
 - `explain_removed.tif`: what each stage removed (1 text, 2 boundary, 3 river, 4 legend, 5 grid)
 - `explain_remains.tif`: the cleaned map the classifier saw
 - `explain_joined.gpkg` layers `joins` (each bridged gap) and `ends` (each open end, with its cause)
+
+## Scoring
+
+`score.py` compares the answer with hand-traced ground truth in `work/truth/1937.gpkg`
+(`./qpy setup/make_truth.py` creates it empty):
+layer `patches` (polygons, `role` = `tune` or `holdout`), layer `lines` (every pipeline drawn on
+the scan inside each patch, traced over `sheet-warped.tif`) and, optionally, layer `nodes`
+(points, `kind` = `junction`, `end` or `exits_patch`). Tune on the tuning patch; score the
+held-out patch only to report (`./qpy score.py --role holdout`). It writes the metrics from
+`prompts.yaml` to `out/scores_<role>.json`, the three worst places, and
+`out/score_errors_<role>.gpkg` (missed and false stretches, breaks, false joins, junctions,
+ignored pools) to
+look at over the scan. `./qpy debug/check_score.py` checks the scorer on synthetic lines.
+
+Tracing, on any sheet: read that sheet's legend first and trace every line drawn with the
+target symbol, named or not; trace only ink you can see, and don't guess a route where the
+line is hidden. Where a solid fill hides lines, the scorer leaves that ground out (today: the
+step-4 `pools` mask, so a line may stop at a pool edge or run across it; `--no-pools` to turn
+it off). A sheet whose fills don't hide lines, or that has none, needs its own check.
+
+On the 1937 sheet: the legend has one line symbol, "OIL PIPE LINE" (thin dashed), and only
+trunks are named, so every thin dashed line is a pipe; heavy dash-dot lines are county
+boundaries; oil pools are solid black and hide what runs under them.
+
+Truth traced on a different scan (for example national gas traces) passes `--truth`,
+`--areas`, `--year`, a measured `--buffer-m` and `--no-pools`.
 
 ## Settings
 
