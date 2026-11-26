@@ -15,8 +15,9 @@ team lead is [@tisljaricleo](https://github.com/tisljaricleo). If that changes, 
 A working proof of concept on one sheet: *The Oil and Gas Journal's Illinois Basin Map*, 1937
 (Indiana Historical Society `dc035/217`). It finds the oil pipe lines and writes them as one
 clean line each: 33 lines today. The main trunks, parallel pairs and corners look right. Some
-lines around Wood River are still missing. Against a hand trace of two patches (see
-"Scoring") it finds about 70-77% of the pipe length and draws nothing false. How it works, in plain terms: [docs/how-it-works.md](docs/how-it-works.md).
+lines around Wood River are still missing. On the held-out patch of a hand trace (see
+"Scoring") it finds about 77% of the pipe length and draws nothing false; counting the ground
+under oil pools, where the scan hides the line, it finds 73%. How it works, in plain terms: [docs/how-it-works.md](docs/how-it-works.md).
 Every rule, score and parameter, with where each number comes from:
 [docs/algorithm.md](docs/algorithm.md).
 
@@ -105,7 +106,9 @@ Tracing, on any sheet: read that sheet's legend first and trace every line drawn
 target symbol, named or not; trace only ink you can see, and don't guess a route where the
 line is hidden. Where a solid fill hides lines, the scorer leaves that ground out (today: the
 step-4 `pools` mask, so a line may stop at a pool edge or run across it; `--no-pools` to turn
-it off). A sheet whose fills don't hide lines, or that has none, needs its own check.
+it off). The pool mask is the pipeline's own, so a pool it gets wrong hides its own miss:
+quote the `--no-pools` score next to it. A sheet whose fills don't hide lines, or that has none,
+needs its own check.
 
 On the 1937 sheet: the legend has one line symbol, "OIL PIPE LINE" (thin dashed), and only
 trunks are named, so every thin dashed line is a pipe; heavy dash-dot lines are county

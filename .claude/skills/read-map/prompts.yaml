@@ -272,7 +272,7 @@ steps:
     evolve: true
     inputs: [classified paths, removal mask, original ink]
     outputs: [joined paths, breaks.json (every remaining end and why it stays open)]
-    scores: [break_count, false_join_count, missing_length]
+    scores: [break_count, false_join_count, missing_length_km]
     feedback: "For each remaining open end: gap to the best continuation, its blank, removed and residual fractions, and which rule refused it."
     prompt: |
       Find every place a target path ends and ask whether the line really stops there. For
@@ -326,17 +326,20 @@ steps:
     evolve: false
     inputs: [joined paths and topology, hand-traced ground truth (tuning and held-out patches)]
     outputs: [scores_<role>.json, score_errors_<role>.gpkg]
-    scores: [all]
+    scores: [length_recall, length_precision, missing_length_km, break_count, false_join_count, junction_recall]
     feedback: "Every metric on the held-out patches, plus the worst three places with coordinates."
     prompt: |
       Score the result against hand-traced ground truth. Use the tuning patch for any
       adjustment and report final numbers only on the held-out patch. Match by buffered
-      overlap (buffer from the georeferencing error). Report each metric below and list the
-      three worst places with coordinates and what went wrong there.
+      overlap; the buffer is a multiple of the target's measured stroke width (truth traced
+      over the same scan shares its georeferencing, so that error cancels). Leave out ground
+      where the scan hides the line (on a sheet with solid fills, the fills), and report the
+      score with that ground included as well. Report each metric this truth supports and list
+      the three worst places with coordinates and what went wrong there.
 
   - id: diagnose
     evolve: true
-    inputs: [scores.json, breaks.json, removal mask, run log]
+    inputs: [scores_<role>.json, score_errors_<role>.gpkg, breaks.json, removal mask, run log]
     outputs: [diagnosis (cause, count, evidence, proposed method change)]
     scores: [none directly; feeds reflection]
     feedback: "The diagnosis itself."
@@ -365,9 +368,9 @@ metrics:
   length_precision: "target length correct / target length claimed"
   break_count: "open ends per 100 km of true line that are not true ends (lower is better)"
   false_join_count: "joins between different lines, or a line and a non-target, per 100 km"
-  missing_length: "ground-truth length with no target path within the buffer"
+  missing_length_km: "ground-truth length with no target path within the buffer"
   junction_recall: "true junctions found / true junctions"
-  section_boundary_correct: "sections whose ends match hand-marked junctions, ends and owner changes"
+  section_boundary_correct: "sections whose ends match hand-marked junctions, ends and owner changes (not scored yet: no sections)"
   target_ink_wrongly_removed: "target ink pixels erased by a non-target stage / target ink pixels"
   symbol_match_recall: "legend symbols matched / hand-counted symbols, per entry"
   text_recall: "labels read / labels on the sheet"

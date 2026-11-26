@@ -266,7 +266,7 @@ layer. This sheet: 75 target paths → 33 lines from 42 joins.
 ## 15. Score (`score.py`)
 
 Compares `corrected` with hand-traced truth, per area (`patches` with `role` tune or holdout),
-in EPSG:5070 metres. Both are clipped to the area.
+in EPSG:5070 metres (continental US only; see Debts). Both are clipped to the area.
 
 - **Pools are not scored.** On this sheet pools are solid and hide any line under it, so no
   route there is known, to the tracer or to the pipeline (**S**: another sheet may draw fills
@@ -286,20 +286,28 @@ in EPSG:5070 metres. Both are clipped to the area.
   (this sheet: pairs ~11 px apart, b ~13 px). **missing_length_km** = missed.
   **length_precision** = 1 − |traced − buffer(truth, b)| / |traced|.
 - **break_count**: traced open ends (no other traced line within b) that lie within b of truth,
-  are not within b of the area edge, and are more than 2b from a true end (hand-marked `end` /
-  `exits_patch` nodes, or truth open ends if there are none). Per 100 km of truth.
+  are not within b of the area edge, and are more than 2b (**R**) from a true end. True ends are
+  the hand-marked `end` / `exits_patch` nodes within b of the area; where none is marked in that
+  area, the truth's own open ends. Per 100 km of truth.
 - **false_join_count**: each traced line is sampled every b/2 and each sample labelled with the
-  nearest true line within b. Runs of one label at least 2b long count. A traced line with runs
-  on two true lines more than 2b apart is a join of two lines; one with a true run and an
+  nearest true line within b. Runs of one label at least 2b (**R**) long count. A traced line
+  with runs on two true lines more than 2b (**R**) apart is a join of two lines; one with a true run and an
   unmatched run is a join into non-target. Per 100 km of truth.
-- **junction_recall**: true junctions (hand-marked, or where ≥ 3 true arms meet within b) where
-  ≥ 3 traced crossings cut a circle of radius 2b and the traced lines are connected inside it.
-- **Worst places**: the area split 10 x 10; the three cells with the most missed + false length.
+- **junction_recall**: true junctions (hand-marked in the area; where none is marked there, where
+  ≥ 3 true arms meet within b) where ≥ 3 traced crossings cut a circle of radius 2b (**R**) and
+  the traced lines are connected inside it: their union, widened by 5% of the radius (**R**),
+  is one piece.
+- **Worst places**: the area split 10 x 10 (reporting only: it picks which cells to list and
+  changes no metric); the three cells with the most missed + false length. Breaks in a cell are
+  named in its description but don't rank it.
 
 Checked on synthetic lines by `debug/check_score.py` (identical, shifted, split, half found,
 parallel pair with one or both traced,
-two kinds of false join, T junction found and missed, line crossing the area edge, and a pool
-cut out of the area: lines stopping at its edges, a line crossing it, a real break outside it).
+two kinds of false join and a line turning at a real T junction that is not one, T junction
+found and missed, line crossing the area edge, hand-marked ends and junctions missing or only in
+another area (both fall back to the truth's own), and a pool cut out of the area: lines stopping
+at its edges, a line crossing it, a real break outside it). Not covered: the 1, 2, 4 sw sweep and
+the polygonizing in `pool_areas`.
 
 ## Output files
 
@@ -318,7 +326,7 @@ cut out of the area: lines stopping at its edges, a line crossing it, a real bre
 | `out/explain_joined.gpkg` `ends` | each open end: `line`, `cause` |
 | `out/explain_joined.gpkg` `junctions` | `line`, `meets` |
 | `out/scores_<role>.json` | `buffer_m`, `pools_ignored`, then per area: `truth_km`, `traced_km`, the metrics above, `pool_area_pct`, `recall_precision_by_buffer`, `worst` (`lon`, `lat`, `what`) |
-| `out/score_errors_<role>.gpkg` | layers `missed`, `false` (lines), `breaks`, `joins`, `junctions` (points; `area`, `info`), `pools` (the ignored areas) |
+| `out/score_errors_<role>.gpkg` | layers `missed`, `false` (lines), `breaks`, `joins`, `junctions` (points; `area`, `info`: for breaks the distance to the nearest true end, for joins `two_lines` or `into_non_target`, for junctions `found` or `missed`), `pools` (the ignored areas); every layer has `area` |
 
 ## Debts (the S values, and other known gaps)
 
@@ -327,5 +335,13 @@ cut out of the area: lines stopping at its edges, a line crossing it, a real bre
   come from the sheet (histograms, `legend.json`, the raster's own bounds).
 - Two ink masks exist; one measured mask should serve every step.
 - Dry-hole symbols match zero times: the legend template doesn't fit their map versions.
-- No ground truth yet. The scorer (step 15) is ready; it needs a hand trace of two patches,
-  one to tune on and one held out, in `work/truth/1937.gpkg`.
+- Ground truth covers two hand-traced patches only (B to tune on, D held out) and isn't
+  committed (`work/truth/1937.gpkg`), so the quoted scores can't be reproduced from the repo.
+  Its `nodes` layer is empty: ends and junctions come from the truth's own geometry.
+- The scorer leaves out pools (step 15, **S**), and uses step 4's pool mask to do it, which rests
+  on the 11 px pool square. A missed pool hides its own miss from the score, so quote
+  `--no-pools` scores too.
+- The scorer measures in EPSG:5070, which covers the continental US only; a sheet elsewhere
+  needs another metric CRS.
+- `1937.gpkg` is written into `score.py`, `setup/make_truth.py` and `run_all.sh`; it should come
+  from the sheet being scored, not a literal.

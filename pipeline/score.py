@@ -58,7 +58,8 @@ ogr.UseExceptions()
 BUF_SW = 2.0           # buffer = this many stroke widths (relative tolerance)
 SWEEP_SW = (1.0, 2.0, 4.0)
 METRIC_EPSG = 5070     # CONUS Albers: metres, < 1% length error over the basin
-N_WORST = 3
+N_WORST = 3            # worst places reported (prompts.yaml `score` feedback)
+GRID = 10              # worst places: the area is cut into GRID x GRID cells (reporting only)
 
 
 def _srs(epsg):
@@ -95,6 +96,11 @@ def read_layer(spec, where=None, fields=()):
         out.append((shapely.from_wkb(bytes(g.ExportToIsoWkb())), attrs))
     ds = None
     return out
+
+
+def union(geoms):
+    """Union of a list of geometries; an empty collection for an empty list."""
+    return unary_union(geoms) if geoms else shapely.GeometryCollection()
 
 
 def lines_of(g):
@@ -170,7 +176,7 @@ def pool_areas(min_area_m2):
         if s.area >= min_area_m2:
             out.append(s)
     vds = mem = None
-    return unary_union(out) if out else shapely.GeometryCollection()
+    return union(out)
 
 
 def endpoints(lines):
@@ -185,7 +191,7 @@ def degree_one_ends(lines, tol):
     """Line ends not within tol of any other line (open ends of the network)."""
     out = []
     for i, ln in enumerate(lines):
-        others = unary_union([l for j, l in enumerate(lines) if j != i]) if len(lines) > 1 else shapely.GeometryCollection()
+        others = union([l for j, l in enumerate(lines) if j != i])
         for p in (shapely.Point(ln.coords[0]), shapely.Point(ln.coords[-1])):
             if others.is_empty or p.distance(others) > tol:
                 out.append(p)
@@ -289,7 +295,7 @@ def missed_truth(truth, pu, buf):
             if seg.length > 0:
                 out.append(seg)
             k = j + 1
-    return unary_union(out) if out else shapely.GeometryCollection()
+    return union(out)
 
 
 def score(pred, truth, area, buf, true_ends=None, true_junctions=None):
@@ -297,20 +303,24 @@ def score(pred, truth, area, buf, true_ends=None, true_junctions=None):
     have holes (ignored pools): their edges count as area edge."""
     pred = [g for ln in pred for g in lines_of(ln.intersection(area))]
     truth = [g for ln in truth for g in lines_of(ln.intersection(area))]
-    pu, tu = unary_union(pred) if pred else shapely.GeometryCollection(), unary_union(truth) if truth else shapely.GeometryCollection()
+    pu, tu = union(pred), union(truth)
     T, P = tu.length, pu.length
     tbuf = tu.buffer(buf)
     missed = missed_truth(truth, pu, buf)
     false = pu.difference(tbuf) if not pu.is_empty else pu
     edge = area.boundary.buffer(buf)
 
-    # breaks: traced open ends on a true line, not at a true end or the area edge
-    if true_ends is None:
+    # breaks: traced open ends on a true line, not at a true end or the area edge. True ends are
+    # the hand-marked ones in this area; with none marked here, the truth's own open ends.
+    true_ends = [p for p in true_ends or [] if p.distance(area) <= buf]
+    if not true_ends:
         true_ends = degree_one_ends(truth, buf)
-    ends_u = unary_union(true_ends) if true_ends else shapely.GeometryCollection()
-    breaks = [p for p in degree_one_ends(pred, buf)
-              if p.distance(tu) <= buf and not edge.contains(p)
-              and (ends_u.is_empty or p.distance(ends_u) > 2 * buf)]
+    ends_u = union(true_ends)
+    breaks = []
+    for p in degree_one_ends(pred, buf):
+        gap = p.distance(ends_u) if not ends_u.is_empty else float("inf")
+        if p.distance(tu) <= buf and not edge.contains(p) and gap > 2 * buf:
+            breaks.append((p, f"{gap:.0f} m from a true end"))
 
     # false joins
     step = buf / 2
@@ -322,15 +332,15 @@ def score(pred, truth, area, buf, true_ends=None, true_junctions=None):
         ids = {r[0] for r in rs if r[0] is not None}
         meet = all(truth[a].distance(truth[b]) <= 2 * buf for a in ids for b in ids if a < b)
         if len(ids) >= 2 and not meet:
-            joins.append(("two_lines", ln.interpolate(0.5, normalized=True)))
+            joins.append((ln.interpolate(0.5, normalized=True), "two_lines"))
         elif ids and any(r[0] is None for r in rs):
             k = next(i for i, l in enumerate(labels) if l is None)
-            joins.append(("into_non_target", pts[k]))
+            joins.append((pts[k], "into_non_target"))
 
-    # junctions
-    if true_junctions is None:
-        true_junctions = truth_junctions(truth, buf)
-    true_junctions = [p for p in true_junctions if area.contains(p)]
+    # junctions: the hand-marked ones in this area; with none marked here, where true arms meet
+    true_junctions = [p for p in true_junctions or [] if area.contains(p)]
+    if not true_junctions:
+        true_junctions = [p for p in truth_junctions(truth, buf) if area.contains(p)]
     jfound = []
     for p in true_junctions:
         n, conn = arms_at(pu, p, 2 * buf) if not pu.is_empty else (0, False)
@@ -350,26 +360,29 @@ def score(pred, truth, area, buf, true_ends=None, true_junctions=None):
         junction_recall=round(sum(f for _, f in jfound) / len(jfound), 3) if jfound else None,
         junctions=len(jfound),
     )
-    errs = dict(missed=lines_of(missed), false=lines_of(false), breaks=breaks, joins=joins, junctions=jfound)
+    # point errors are all (point, info) so write_errors treats every point layer alike
+    errs = dict(missed=lines_of(missed), false=lines_of(false), breaks=breaks, joins=joins,
+                junctions=[(p, "found" if ok else "missed") for p, ok in jfound])
     return m, errs
 
 
 def worst_places(area, errs, n=N_WORST):
-    """Split the area into a 10 x 10 grid; the cells with the most missed + false length."""
+    """Split the area into a GRID x GRID grid; the cells with the most missed + false length.
+    Breaks in a cell are listed in its description but do not rank it."""
     x0, y0, x1, y1 = area.bounds
-    cw, ch = (x1 - x0) / 10, (y1 - y0) / 10
-    miss, fals = unary_union(errs["missed"]), unary_union(errs["false"])
+    cw, ch = (x1 - x0) / GRID, (y1 - y0) / GRID
+    miss, fals = union(errs["missed"]), union(errs["false"])
     cells = []
-    for i in range(10):
-        for j in range(10):
+    for i in range(GRID):
+        for j in range(GRID):
             c = shapely.box(x0 + i * cw, y0 + j * ch, x0 + (i + 1) * cw, y0 + (j + 1) * ch).intersection(area)
             if c.is_empty:
                 continue
             mk, fk = miss.intersection(c).length / 1000, fals.intersection(c).length / 1000
-            nb = sum(c.contains(p) for p in errs["breaks"])
-            if mk + fk > 0 or nb:
-                cells.append((mk + fk + 0.0 * nb, mk, fk, nb, c.centroid))
-    cells.sort(key=lambda t: (-t[0], -t[3]))
+            if mk + fk > 0:
+                nb = sum(c.contains(p) for p, _ in errs["breaks"])
+                cells.append((mk + fk, mk, fk, nb, c.centroid))
+    cells.sort(key=lambda t: -t[0])
     back = osr.CoordinateTransformation(_srs(METRIC_EPSG), _srs(4326))
     out = []
     for _, mk, fk, nb, c in cells[:n]:
@@ -396,18 +409,12 @@ def write_errors(path, errs_by_area):
     for name, kind in spec.items():
         lyr = ds.CreateLayer(name, _srs(4326), kind)
         lyr.CreateField(ogr.FieldDefn("area", ogr.OFTString))
-        if name in ("joins", "junctions"):
+        points = kind == ogr.wkbPoint
+        if points:
             lyr.CreateField(ogr.FieldDefn("info", ogr.OFTString))
         for aid, errs in errs_by_area.items():
             for item in errs.get(name, []):
-                info = None
-                if name == "joins":
-                    info, g = item
-                elif name == "junctions":
-                    g, ok = item
-                    info = "found" if ok else "missed"
-                else:
-                    g = item
+                g, info = item if points else (item, None)
                 og = ogr.CreateGeometryFromWkb(shapely.to_wkb(g))
                 og.Transform(back)
                 f = ogr.Feature(lyr.GetLayerDefn())
@@ -453,10 +460,9 @@ def main(argv=None):
 
     pl = [g for g, _ in pred for g in lines_of(g)]
     tl = [g for g, _ in truth for g in lines_of(g)]
-    t_ends = t_junc = None
-    if nodes:
-        t_ends = [g for g, at in nodes if at.get("kind") in ("end", "exits_patch")]
-        t_junc = [g for g, at in nodes if at.get("kind") == "junction"]
+    nodes = nodes or []
+    t_ends = [g for g, at in nodes if at.get("kind") in ("end", "exits_patch")]
+    t_junc = [g for g, at in nodes if at.get("kind") == "junction"]
 
     pools = None
     if not a.no_pools:

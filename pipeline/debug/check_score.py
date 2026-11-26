@@ -41,6 +41,15 @@ check("half found: recall", m["length_recall"], 0.5)
 check("half found: precision", m["length_precision"], 1.0)
 check("half found: one break", m["breaks"], 1)
 
+half = [L([(0, 0), (10000, 0)])]
+far = [shapely.Point(50000, 50000)]  # hand-marked, but in another area
+m, _ = score(half, truth, area, buf, true_ends=[])
+check("no hand-marked ends (only junctions marked): falls back to truth ends", m["breaks"], 1)
+m, _ = score(half, truth, area, buf, true_ends=far)
+check("hand-marked ends only in another area: falls back", m["breaks"], 1)
+m, _ = score(half, truth, area, buf, true_ends=[shapely.Point(0, 0), shapely.Point(10000, 0)])
+check("hand-marked ends where the traced line stops: no break", m["breaks"], 0)
+
 two = [L([(0, 0), (8000, 0)]), L([(12000, 5000), (20000, 5000)])]
 m, _ = score([L([(0, 0), (8000, 0), (12000, 5000), (20000, 5000)])], two, area, buf)
 check("joins two separate lines: false joins", m["false_joins"], 1)
@@ -59,6 +68,10 @@ m, _ = score(tee, tee, area, buf)
 check("T junction found", m["junction_recall"], 1.0)
 m, _ = score([L([(0, 0), (20000, 0)])], tee, area, buf)
 check("T junction missing branch", m["junction_recall"], 0.0)
+m, _ = score(tee, tee, area, buf, true_junctions=[])
+check("no hand-marked junctions (only ends marked): falls back", m["junctions"], 1)
+m, _ = score([L([(0, 0), (10000, 0), (10000, 8000)]), L([(10000, 0), (20000, 0)])], tee, area, buf)
+check("traced line turning at a real T junction: not a false join", m["false_joins"], 0)
 
 m, _ = score([L([(-1000, 0), (21000, 0)])], [L([(-1000, 0), (21000, 0)])], area, buf)
 check("line crossing the area edge: no breaks", m["breaks"], 0)
