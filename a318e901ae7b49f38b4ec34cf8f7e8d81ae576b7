@@ -1,0 +1,27 @@
+.gitignore
+  s_111c4f7ff198f4::t_3573949041b78a 1-2
+groundtruth/natural_gas/stitch.py
+  s_111c4f7ff198f4::t_3e4135ad67a9d2 92-94
+  s_111c4f7ff198f4::t_0bc1766d9d994a 1-22,29-91,95-100,102-104,107-109,113-118,120-122,124-126,128-172,177-238
+  s_111c4f7ff198f4::t_f71e4e0528ff94 101,106,110
+  s_111c4f7ff198f4::t_260c9e57ffe47d 105
+  s_111c4f7ff198f4::t_3573949041b78a 23-28,119,123,127
+  s_111c4f7ff198f4::t_f5dbdd07356513 111-112
+  s_111c4f7ff198f4::t_0db3cedf78cf20 173-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "a318e901ae7b49f38b4ec34cf8f7e8d81ae576b7",
+  "prompts": {},
+  "sessions": {
+    "s_111c4f7ff198f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eb1e86d2-0b65-4658-8723-7a1f0ae8a2dd",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Nick Marden <nmarden@avvo.com>"
+    }
+  }
+}
