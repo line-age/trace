@@ -30,6 +30,10 @@ Metrics (prompts.yaml `metrics`, the ones this truth supports):
                      two buffers long), per 100 km of truth
   junction_recall    true junctions where the traced lines also meet: at least three traced
                      arms cross a circle of two buffers around it and they are connected inside
+  target_ink_wrongly_removed
+                     the target's own ink (read across each true line on the scan) that a
+                     removal stage erased / all of it, in total and per stage (ink_audit.py).
+                     Only for truth traced over this scan, with out/explain_removed.tif present
 
 Pools are not scored. Inside a solid pool the scan shows no line, so neither the truth nor the
 answer can know a route there. The pool mask (step 4, out/masks.npz `pools`) is cut out of each
@@ -489,6 +493,15 @@ def main(argv=None):
         m["worst"] = worst_places(area, errs)
         result["areas"][str(aid)] = m
         errs_by_area[aid] = errs
+
+    removed = OUT / "explain_removed.tif"
+    if not a.buffer_m and removed.exists():  # same scan: the removal raster lines up with the truth
+        import ink_audit
+        ta = ink_audit.audit(a.truth, a.areas, a.role, removed, a.truth_where)
+        for aid, m in result["areas"].items():
+            if aid in ta:
+                m["target_ink_wrongly_removed"] = ta[aid]["fraction"]
+                m["target_ink_removed_by_stage"] = ta[aid]["by_stage"]
 
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)

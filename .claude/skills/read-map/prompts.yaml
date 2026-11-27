@@ -235,11 +235,12 @@ steps:
     evolve: true
     inputs: [pieces, removal mask, original ink, legend.json]
     outputs: [links, paths]
-    scores: [break_count, false_join_count]
+    scores: [length_recall, break_count, false_join_count]
     feedback: "Links considered and accepted; largest matching group; links rejected by each rule."
     prompt: |
       Link piece ends into paths. Two ends may link when they face each other along one
-      axis. Score each link as log-odds against chance lining-up: turn, sideways offset,
+      axis; two ends that nearly touch (closer than two stroke widths) need only similar
+      axes, since the direction between them is noise. Score each link as log-odds against chance lining-up: turn, sideways offset,
       similar length and width, a blank gap near the target's own gap, and how crowded the
       area is with other ends. Sample the gap pixel by pixel: blank paper counts against
       the link, removed ground counts as "can't tell" with a small cost, ink counts for it.
@@ -326,7 +327,7 @@ steps:
     evolve: false
     inputs: [joined paths and topology, hand-traced ground truth (tuning and held-out patches)]
     outputs: [scores_<role>.json, score_errors_<role>.gpkg]
-    scores: [length_recall, length_precision, missing_length_km, break_count, false_join_count, junction_recall]
+    scores: [length_recall, length_precision, missing_length_km, break_count, false_join_count, junction_recall, target_ink_wrongly_removed]
     feedback: "Every metric on the held-out patches, plus the worst three places with coordinates."
     prompt: |
       Score the result against hand-traced ground truth. Use the tuning patch for any
@@ -371,7 +372,7 @@ metrics:
   missing_length_km: "ground-truth length with no target path within the buffer"
   junction_recall: "true junctions found / true junctions"
   section_boundary_correct: "sections whose ends match hand-marked junctions, ends and owner changes (not scored yet: no sections)"
-  target_ink_wrongly_removed: "target ink pixels erased by a non-target stage / target ink pixels"
+  target_ink_wrongly_removed: "target ink pixels erased by a non-target stage / target ink pixels, per stage (target ink read across each true line on the scan; ink_audit.py, reported by score.py)"
   symbol_match_recall: "legend symbols matched / hand-counted symbols, per entry"
   text_recall: "labels read / labels on the sheet"
   georef_error_px: "held-out median boundary offset after the fix"
@@ -400,5 +401,5 @@ code_components:
   topology: [bridge.py:main]   # junctions and end causes only; sections and owner labels not yet
   diagnose: [diagnose_breaks.py, tally_breaks.py]
   review_visually: [debug/dbg_overlap2.py, debug/dbg_crop.py]   # checks only; the looking is done in QGIS
-  score: [score.py]
+  score: [score.py, ink_audit.py]
   # not yet in code: generalize

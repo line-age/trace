@@ -182,7 +182,10 @@ length ≥ max(6, 0.25 x legend dash) and length ≥ 2 sw (elongated). 1879 piec
 
 Candidate: two ends of different pieces within 3P (**C**, `LINK_PERIODS`). Refused if:
 
-- either end points more than ~26° away from the other (cos < 0.9), or the axes differ > 25° **R**
+- either end points more than ~26° away from the other (cos < 0.9), or the axes differ > 25° **R**.
+  Ends closer than 2 sw (the thicker piece's) nearly touch: the direction between them is noise,
+  so only the axes are compared (the same "close" rule as step 14). Without it a dash cut in
+  two by a removal, or shaved by a text box lying along it, could not relink
 - the straight gap passes over another kept piece whose axis is within 25° of the gap direction
   (that piece is the next link; without this rule every dashed line is traced twice, as two
   interleaved chains)
@@ -224,7 +227,7 @@ line's remnants line up well enough to outvote a wrong width piece by piece). So
 Σ links (solid term). Class: **target** if target > 8 **R** (`MARGIN`) and > solid; else
 **solid** if solid > 8; else **chance**.
 
-Output `explain_paths.gpkg` layer `paths`: 173 paths, 76 target, in a clean run.
+Output `explain_paths.gpkg` layer `paths`: 187 paths, 73 target (classify-only on the saved removal raster).
 
 ## 14. Join each line (`bridge.py`)
 
@@ -261,7 +264,7 @@ removed ground (X = the stage that removed most of it); **unlinked ink ahead** i
 leftover ink; **paper ahead** if it holds a blank run ≥ 3P; **other**.
 
 Each line is simplified (Douglas-Peucker, tolerance = its median sw) into the `corrected`
-layer. This sheet: 75 target paths → 33 lines from 42 joins.
+layer. This sheet: 72 target paths → 35 lines from 37 joins.
 
 ## 15. Score (`score.py`)
 
@@ -297,6 +300,12 @@ in EPSG:5070 metres (continental US only; see Debts). Both are clipped to the ar
   ≥ 3 true arms meet within b) where ≥ 3 traced crossings cut a circle of radius 2b (**R**) and
   the traced lines are connected inside it: their union, widened by 5% of the radius (**R**),
   is one piece.
+- **target_ink_wrongly_removed** (`ink_audit.py`): the target's own ink, found from the truth and
+  the scan alone: at every pixel along a true line, the ink run across it nearest the trace
+  (within one legend width) is the line's ink if it is at most 1.6 legend widths long (**R**; a
+  crossing letter, pool or river makes a longer run and is not target ink). Reported as the
+  share of those pixels in the removal raster, in total and per stage. Only for truth traced
+  over this scan. A label printed tight along a line still leaks a few letter strokes in.
 - **Worst places**: the area split 10 x 10 (reporting only: it picks which cells to list and
   changes no metric); the three cells with the most missed + false length. Breaks in a cell are
   named in its description but don't rank it.
@@ -325,7 +334,7 @@ the polygonizing in `pool_areas`.
 | `out/explain_joined.gpkg` `joins` | each bridged gap: `a`, `b` (path fids), `gap_p` (in periods), `removed` (fraction), `score` |
 | `out/explain_joined.gpkg` `ends` | each open end: `line`, `cause` |
 | `out/explain_joined.gpkg` `junctions` | `line`, `meets` |
-| `out/scores_<role>.json` | `buffer_m`, `pools_ignored`, then per area: `truth_km`, `traced_km`, the metrics above, `pool_area_pct`, `recall_precision_by_buffer`, `worst` (`lon`, `lat`, `what`) |
+| `out/scores_<role>.json` | `buffer_m`, `pools_ignored`, then per area: `truth_km`, `traced_km`, the metrics above, `pool_area_pct`, `recall_precision_by_buffer`, `target_ink_wrongly_removed`, `target_ink_removed_by_stage`, `worst` (`lon`, `lat`, `what`) |
 | `out/score_errors_<role>.gpkg` | layers `missed`, `false` (lines), `breaks`, `joins`, `junctions` (points; `area`, `info`: for breaks the distance to the nearest true end, for joins `two_lines` or `into_non_target`, for junctions `found` or `missed`), `pools` (the ignored areas); every layer has `area` |
 
 ## Debts (the S values, and other known gaps)

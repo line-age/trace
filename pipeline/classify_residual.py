@@ -109,7 +109,10 @@ def link_llr(pi, pj, ei, ej, orig_ink, removed, target, lam, lab=None, axes=None
     if d < 1:
         return None
     u = v / d
-    if oa @ u < 0.9 or ob @ -u < 0.9 or abs(pi["ax"] @ pj["ax"]) < np.cos(np.radians(25)):
+    # two ends closer than two stroke widths nearly touch: the direction between them is noise
+    # (as in bridge.py), so only the pieces' own axes are compared
+    close = d < 2 * max(pi["sw"], pj["sw"])
+    if (not close and (oa @ u < 0.9 or ob @ -u < 0.9)) or abs(pi["ax"] @ pj["ax"]) < np.cos(np.radians(25)):
         return None
     period = target["dash"] + target["gap"]
     ev = gap_evidence(a, b, orig_ink, removed, lab, (pi.get("id", 0), pj.get("id", 0)), axes)

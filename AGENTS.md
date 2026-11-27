@@ -73,10 +73,12 @@ even after you stop waiting, blocking later calls. Use QGIS only for viewing.
 - `setup/make_ink.py` uses a fixed grey threshold (110), and `stages.py`/`make_borders.py`
   carry this sheet's extent as a literal box. Both should come from the sheet.
 - Dry-hole symbols match zero times: their legend template doesn't fit their map versions.
-- Recall is about 0.7. Patch D (held out, the number to report): 0.77 recall / 1.00 precision /
-  3 breaks with pools left out of the score, 0.73 / 1.00 / 5 with them in. Patch B (tuning):
-  0.70 / 1.00 / 11, or 0.68 / 0.99 / 13 and one false join with pools in. Misses are whole stretches, mostly
-  short heavy-dash field lines next to pools and lines running through labels. Truth is a hand
+- Recall is about 0.75. Patch D (held out, the number to report): 0.79 recall / 1.00 precision /
+  3 breaks with pools left out of the score, 0.74 / 1.00 / 5 with them in. Patch B (tuning):
+  0.75 / 1.00 / 11, or 0.73 / 0.99 / 13 and one false join with pools in. Misses are whole
+  stretches, most of them beside labels: short dash runs between a label and a pool or boundary
+  that never score as target alone, and dashes erased or shaved by text boxes. The removal
+  stages erase about 25% of the target's own ink (`target_ink_wrongly_removed`, text 15%). Truth is a hand
   trace of two patches in `work/truth/1937.gpkg` (not committed, see README "Scoring"). Tune on
   B only; score D to report.
 

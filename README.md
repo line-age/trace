@@ -69,7 +69,7 @@ TRACE_RUN=learned ./qpy run_explain.py --classify-only --reuse-symbols
 | 12 | `legend.py` | Reads the legend into classes | `out/legend.json` |
 | 13 | `run_explain.py` | Removes text, borders, rivers, symbols, grid; classifies what's left | `out/explain_paths.gpkg`, `out/explain_removed.tif`, `out/explain_remains.tif` |
 | 14 | `bridge.py` | Joins each line's pieces into one line | `out/explain_joined.gpkg` |
-| 15 | `score.py` | Scores the lines against hand-traced truth (skipped until `truth/1937.gpkg` exists) | `out/scores_tune.json`, `out/score_errors_tune.gpkg` |
+| 15 | `score.py` (with `ink_audit.py`) | Scores the lines against hand-traced truth, and how much of the target's ink each removal stage erased (skipped until `truth/1937.gpkg` exists) | `out/scores_tune.json`, `out/score_errors_tune.gpkg` |
 
 Supporting modules: `common.py` (paths, shared geometry), `explain.py` (ink, paper colour,
 the removal state), `stages.py` (the removal stages), `classify_residual.py` (pieces, links,
